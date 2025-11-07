@@ -9,9 +9,13 @@
     .card-item.selectable{position:relative; border:1px solid var(--border); transition:box-shadow .2s ease, border-color .2s ease; cursor:pointer}
     .card-item.selectable.selected{border-color:#5c8df6; box-shadow:0 0 0 2px rgba(92,141,246,.25)}
     .card-item.selectable.selected::after{content:'\2713'; position:absolute; left:12px; top:12px; background:rgba(26,34,50,.85); border:1px solid #3a4253; color:#cbd5e1; width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:8px; font-size:14px}
+    /* Loading popup */
+    #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; }
+    .loader { border: 4px solid #3a4253; border-top: 4px solid #5c8df6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
 <h2>Preferensi Liburan</h2>
-<form method="POST" action="{{ route('preferences.store') }}" class="grid grid-2">
+<form method="POST" action="{{ route('preferences.store') }}" class="grid grid-2" id="prefForm">
     @csrf
     <div>
         <label class="required">Kategori</label>
@@ -76,6 +80,14 @@
     </div>
 </form>
 
+<div id="loading-overlay">
+    <div style="background: #1e293b; padding: 20px 40px; border-radius: 8px; text-align: center; color: #cbd5e1;">
+        <div class="loader"></div>
+        <h4 style="margin-top: 16px; margin-bottom: 0;">Finding Recommendations...</h4>
+        <p style="font-size: 14px; color: #94a3b8;">Please wait a moment, this may take a while.</p>
+    </div>
+</div>
+
 @if (isset($recommendation) && $recommendation)
     @php($rec = json_decode($recommendation->response_json, true))
 
@@ -86,12 +98,16 @@
             <div class="cards">
                 @foreach (($rec['destinations'] ?? []) as $d)
                     <div class="card-item selectable" style="position:relative" data-index="{{ $loop->index }}">
-                        <div class="media"><img src="/images/Destinasi_Bali.jpg" alt="Destination"></div>
+                        @php($imgKeyword = !empty($d['name']) ? explode(',', $d['name'])[0] : 'travel')
+                        {{-- Unsplash Currently Error --}}
+                        {{-- <div class="media"><img src="https://source.unsplash.com/400x300/?{{ urlencode($imgKeyword) }}" alt="{{ $d['name'] ?? 'Destination' }}"></div> --}}
+                        {{-- Picsum --}}
+                        <div class="media"><img src="https://picsum.photos/400/300?random={{ $loop->index }}" alt="{{ $d['name'] ?? 'Destination' }}"></div>
                         <div class="body">
                             <div class="badge">{{ $d['mood'] }} · {{ $d['country'] }}</div>
                             <h4 style="margin:8px 0 6px">{{ $d['name'] }}</h4>
                             <div style="color:#cbd5e1; font-size:13px;">Kegiatan: {{ implode(', ', $d['activities'] ?? []) }}</div>
-                            <div style="margin-top:8px"><strong>Rp {{ number_format(($d['est_budget'] ?? 0) * 1000, 0, ',', '.') }}</strong> estimasi</div>
+                            <div style="margin-top:8px"><strong>Rp {{ number_format(($d['est_budget'] ?? 0), 0, ',', '.') }}</strong> estimasi</div>
                         </div>
                     </div>
                 @endforeach
@@ -131,5 +147,21 @@
         </form>
     </div>
 @endif
+
+<script>
+    // Show loading popup on form submit
+    (function(){
+        const prefForm = document.getElementById('prefForm');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (prefForm && loadingOverlay) {
+            prefForm.addEventListener('submit', function() {
+                // Basic validation check before showing loader
+                if (prefForm.checkValidity()) {
+                    loadingOverlay.style.display = 'flex';
+                }
+            });
+        }
+    })();
+</script>
 
 @endsection

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class PreferenceController extends Controller
 {
@@ -75,31 +76,105 @@ class PreferenceController extends Controller
             'budget_max'    => $data['budget_max'],
         ];
 
-        $endpoint = config('services.ai.endpoint');
-        $apiKey   = config('services.ai.api_key');
-        $timeout  = (int) config('services.ai.timeout', 10);
+        // --- 1. SET UP GEMINI ---
+        $apiKey   = 'AIzaSyCALgu23JsiR-j_LHec7ZjZaRf7sfvl1KA'; // Your Google AI Studio Key
+        // The API endpoint without the key in the URL
+        $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+
+        $timeout  = (int) 2000; // Give AI a bit more time
 
         $result = null;
-        $source = 'local';
+        $source = 'local'; // Default to local
 
         try {
-            if ($endpoint && $apiKey) {
+            if ($apiKey) {
+                $categoryName = DB::table('master_category')->where('category_id', $payload['category_id'])->value('category_name');
+                $countryName = DB::table('master_country')->where('country_id', $payload['country_id'])->value('country_name');
+                $moodName = DB::table('master_mood')->where('mood_id', $payload['mood_id'])->value('mood_name');
+
+                // --- 2. CREATE A PROMPT ---
+                // This is the most important part. You must convert your data into an instruction.
+                // PRO-TIP: This prompt would be even better if you passed names
+                // instead of IDs (e.g., "Relax & Beach" instead of "mood_id: 3")
+                $prompt = "You are a travel recommendation expert. Generate a travel plan with 3 different destination options based on these preferences:
+                - Category: {$categoryName}
+                - Country: {$countryName}
+                - Mood: {$moodName}
+                - Duration: {$payload['duration_days']} days
+                - Budget: {$payload['budget_min']} to {$payload['budget_max']}
+
+                Please provide a response ONLY in a valid JSON format, matching this exact structure:
+                {
+                \"destinations\": [
+                    {\"name\": \"...\", \"country\": \"...\", \"mood\": \"...\", \"activities\": [\"...\"], \"est_budget\": ...},
+                    {\"name\": \"...\", \"country\": \"...\", \"mood\": \"...\", \"activities\": [\"...\"], \"est_budget\": ...},
+                    {\"name\": \"...\", \"country\": \"...\", \"mood\": \"...\", \"activities\": [\"...\"], \"est_budget\": ...},
+                    {\"name\": \"...\", \"country\": \"...\", \"mood\": \"...\", \"activities\": [\"...\"], \"est_budget\": ...}
+                ],
+                \"accommodations\": [{\"name\": \"...\", \"type\": \"...\", \"price_per_night\": ...}],
+                \"total_estimate\": ...,
+                \"currency\": \"Rupiah\"
+                }
+                ";
+
+                // --- 3. FORMAT THE GEMINI PAYLOAD ---
+                // This is the specific JSON structure Gemini expects.
+                $geminiPayload = [
+                    'contents' => [
+                        [
+                            'parts' => [
+                                ['text' => $prompt]
+                            ]
+                        ]
+                    ],
+                    // This "pro-tip" tells Gemini to ALWAYS return JSON. Very reliable!
+                    'generationConfig' => [
+                        'responseMimeType' => 'application/json',
+                    ]
+                ];
+
+                // --- 4. MAKE THE API CALL ---
                 $resp = Http::timeout($timeout)
+                    ->withHeaders([
+                        'x-goog-api-key' => $apiKey
+                    ])
                     ->accept('application/json')
-                    ->asJson()
-                    ->withToken($apiKey)
-                    ->post($endpoint, $payload);
+                    ->asJson() // Send our data as JSON
+                    ->post($endpoint, $geminiPayload); // Send the NEW payload
+
 
                 if ($resp->successful()) {
-                    $apiResult = $resp->json();
-                    $result = $this->normalizeResult((array) $apiResult) ?: (array) $apiResult;
-                    $source = 'api';
+                    // --- 5. PARSE THE GEMINI RESPONSE ---
+                    // The structure is different: { "candidates": [ ... ] }
+                    // We also use json_decode because Gemini returns a JSON *string*.
+                    $apiJsonString = $resp->json('candidates.0.content.parts.0.text');
+
+                    if ($apiJsonString) {
+                        $result = json_decode($apiJsonString, true);
+                        // Check if decoding worked and it's not empty
+                        if (json_last_error() === JSON_ERROR_NONE && !empty($result)) {
+                            // Your normalizeResult might not be needed if you trust the prompt,
+                            // but you can keep it for validation.
+                            $result = $this->normalizeResult((array) $result) ?: (array) $result;
+                            $source = 'api';
+                        } else {
+                            // Gemini response was not valid JSON
+                            Log::error('Gemini API returned invalid JSON: ' . $apiJsonString);
+                        }
+                    }
+                } else {
+                    // Log the API error if it failed
+                    Log::error('Gemini API request failed: ' . $resp->body());
                 }
             }
         } catch (\Throwable $e) {
+            Log::error('Gemini integration error: ' . $e->getMessage());
             // fallback to local data
         }
 
+        // --- 6. FALLBACK & SAVE (Your existing logic) ---
+        // This part is identical to your original code.
+        // If $result is still null, this logic will run.
         if (!$result) {
             $days = (int) ($data['duration_days'] ?? 3);
             $baseTransport = 300; // ribuan
@@ -143,8 +218,8 @@ class PreferenceController extends Controller
         $recommendationId = DB::table('ai_recommendations')->insertGetId([
             'user_id' => $userId,
             'holiday_id' => $holidayId,
-            'payload' => json_encode($payload),
-            'response_json' => json_encode($result),
+            'payload' => json_encode($payload), // The original payload
+            'response_json' => json_encode($result), // The AI or local result
             'source' => $source,
             'created_at' => now(),
             'updated_at' => now(),
