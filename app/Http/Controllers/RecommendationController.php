@@ -9,25 +9,25 @@ use Illuminate\Support\Facades\Http;
 
 class RecommendationController extends Controller
 {
-    public function index()
-    {
-        $userId = Auth::id();
-        $holiday = DB::table('users_holiday')
-            ->where('user_id', $userId)
-            ->orderByDesc('holiday_id')
-            ->first();
+    // public function index()
+    // {
+    //     $userId = Auth::id();
+    //     $holiday = DB::table('users_holiday')
+    //         ->where('user_id', $userId)
+    //         ->orderByDesc('holiday_id')
+    //         ->first();
 
-        $recommendation = null;
-        if ($holiday) {
-            $recommendation = DB::table('ai_recommendations')
-                ->where('user_id', $userId)
-                ->where('holiday_id', $holiday->holiday_id)
-                ->orderByDesc('created_at')
-                ->first();
-        }
+    //     $recommendation = null;
+    //     if ($holiday) {
+    //         $recommendation = DB::table('ai_recommendations')
+    //             ->where('user_id', $userId)
+    //             ->where('holiday_id', $holiday->holiday_id)
+    //             ->orderByDesc('created_at')
+    //             ->first();
+    //     }
 
-        return view('recommendations.index', compact('holiday', 'recommendation'));
-    }
+    //     return view('recommendations.index', compact('holiday', 'recommendation'));
+    // }
 
     public function run(Request $request)
     {

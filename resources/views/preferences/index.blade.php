@@ -97,9 +97,9 @@
                 @endforeach
             </div>
             <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center">
+                <button type="submit" class="btn">Next</button>
                 <div id="selectNote" class="alert-error" style="display:none; margin:0">Silahkan pilih destinasi terlebih dahulu.</div>
                 <input type="hidden" name="selected_destinations[]" id="selectedIndex">
-                <button type="submit" class="btn">Next</button>
             </div>
             <script>
                 // Klik kartu untuk memilih satu destinasi dengan highlight
