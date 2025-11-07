@@ -78,10 +78,10 @@
 
 @if (isset($recommendation) && $recommendation)
     @php($rec = json_decode($recommendation->response_json, true))
-    
+
     <div class="section" style="margin-top:32px">
         <h3>Rekomendasi Destinasi AI</h3>
-        <form method="GET" action="{{ route('recommendations.accommodations') }}">
+        <form method="GET" action="{{ route('recommendations.accommodations') }}" id="destForm">
             <input type="hidden" name="recommendation_id" value="{{ $recommendation->recommendation_id ?? '' }}">
             <div class="cards">
                 @foreach (($rec['destinations'] ?? []) as $d)
@@ -96,7 +96,8 @@
                     </div>
                 @endforeach
             </div>
-            <div style="margin-top:16px; text-align:right">
+            <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center">
+                <div id="selectNote" class="alert-error" style="display:none; margin:0">Silahkan pilih destinasi terlebih dahulu.</div>
                 <input type="hidden" name="selected_destinations[]" id="selectedIndex">
                 <button type="submit" class="btn">Next</button>
             </div>
@@ -105,13 +106,26 @@
                 (function(){
                     const cards = document.querySelectorAll('.card-item.selectable');
                     const hidden = document.getElementById('selectedIndex');
+                    const form = document.getElementById('destForm');
+                    const note = document.getElementById('selectNote');
                     cards.forEach(card => {
                         card.addEventListener('click', () => {
                             cards.forEach(el => el.classList.remove('selected'));
                             card.classList.add('selected');
                             hidden.value = card.getAttribute('data-index');
+                            if (note) { note.style.display = 'none'; }
                         });
                     });
+                    if (form) {
+                        form.addEventListener('submit', (e) => {
+                            if (!hidden.value) {
+                                e.preventDefault();
+                                if (note) { note.style.display = 'block'; }
+                                const firstCard = cards[0];
+                                if (firstCard) { firstCard.scrollIntoView({behavior:'smooth', block:'center'}); }
+                            }
+                        });
+                    }
                 })();
             </script>
         </form>
