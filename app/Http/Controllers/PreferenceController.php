@@ -76,8 +76,8 @@ class PreferenceController extends Controller
             'budget_max'    => $data['budget_max'],
         ];
 
-        // --- 1. SET UP GEMINI ---
-        $apiKey   = 'AIzaSyCALgu23JsiR-j_LHec7ZjZaRf7sfvl1KA'; // Your Google AI Studio Key
+        //from env
+        $apiKey = env('GOOGLE_AI_API_KEY'); // Your Google AI Studio Key
         // The API endpoint without the key in the URL
         $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
