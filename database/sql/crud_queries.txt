@@ -1,0 +1,205 @@
+USE ai_travel_app;
+
+-- USERS
+-- CREATE
+INSERT INTO users (name, email, password)
+VALUES ('Tester Satu', 'tester1@example.com', '$2y$10$dummyhash');
+SET @user_id := LAST_INSERT_ID();
+
+-- READ
+SELECT id, name, email, created_at FROM users;
+
+-- UPDATE
+UPDATE users SET name = 'Tester Satu Edit' WHERE id = @user_id;
+
+-- DELETE
+DELETE FROM users WHERE id = @user_id;
+
+-- MASTER_CATEGORY
+-- CREATE
+INSERT INTO master_category (category_name) VALUES ('Beach');
+SET @cat_id := LAST_INSERT_ID();
+
+-- READ
+SELECT * FROM master_category WHERE category_id = @cat_id;
+
+-- UPDATE
+UPDATE master_category SET category_name = 'Beach & Sun' WHERE category_id = @cat_id;
+
+-- DELETE
+DELETE FROM master_category WHERE category_id = @cat_id;
+
+-- MASTER_COUNTRY
+-- CREATE
+INSERT INTO master_country (country_name) VALUES ('Indonesia');
+SET @country_id := LAST_INSERT_ID();
+
+-- READ
+SELECT country_id, country_name FROM master_country WHERE country_id = @country_id;
+
+-- UPDATE
+UPDATE master_country SET country_name = 'ID - Indonesia' WHERE country_id = @country_id;
+
+-- DELETE
+DELETE FROM master_country WHERE country_id = @country_id;
+
+-- MASTER_MOOD
+-- CREATE
+INSERT INTO master_mood (mood_name) VALUES ('Relax');
+SET @mood_id := LAST_INSERT_ID();
+
+-- READ
+SELECT mood_id, mood_name FROM master_mood WHERE mood_id = @mood_id;
+
+-- UPDATE
+UPDATE master_mood SET mood_name = 'Relax & Chill' WHERE mood_id = @mood_id;
+
+-- DELETE
+DELETE FROM master_mood WHERE mood_id = @mood_id;
+
+-- USERS_HOLIDAY
+-- CREATE
+INSERT INTO users_holiday
+(user_id, category_id, country_id, mood_id, destination_hint, duration_days, budget_min, budget_max, default_payment_method)
+VALUES (@user_id, @cat_id, @country_id, @mood_id, 'Bali', 5, 3000000.00, 8000000.00, 'virtual_account');
+SET @holiday_id := LAST_INSERT_ID();
+
+-- READ
+SELECT uh.holiday_id, u.name, mc.category_name, mco.country_name, mm.mood_name,
+       uh.destination_hint, uh.duration_days, uh.budget_min, uh.budget_max,
+       uh.default_payment_method, uh.created_at
+FROM users_holiday uh
+JOIN users u ON u.id = uh.user_id
+LEFT JOIN master_category mc ON mc.category_id = uh.category_id
+LEFT JOIN master_country mco ON mco.country_id = uh.country_id
+LEFT JOIN master_mood mm ON mm.mood_id = uh.mood_id
+WHERE uh.holiday_id = @holiday_id;
+
+-- UPDATE
+UPDATE users_holiday
+SET duration_days = 7, budget_max = 9000000.00
+WHERE holiday_id = @holiday_id;
+
+-- UPDATE (tambahan kolom baru)
+UPDATE users_holiday
+SET default_payment_method = 'virtual_account'
+WHERE holiday_id = @holiday_id;
+
+-- DELETE
+DELETE FROM users_holiday WHERE holiday_id = @holiday_id;
+
+-- DESTINATIONS
+-- CREATE
+INSERT INTO destinations
+(name, country_id, category_id, mood_id, description, average_cost)
+VALUES ('Bali - Kuta', @country_id, @cat_id, @mood_id, 'Pantai & hiburan', 5000000.00);
+SET @destination_id := LAST_INSERT_ID();
+
+-- READ
+SELECT d.destination_id, d.name, mco.country_name, mc.category_name, mm.mood_name,
+       d.average_cost, d.created_at
+FROM destinations d
+LEFT JOIN master_country mco ON mco.country_id = d.country_id
+LEFT JOIN master_category mc ON mc.category_id = d.category_id
+LEFT JOIN master_mood mm ON mm.mood_id = d.mood_id
+WHERE d.destination_id = @destination_id;
+
+-- UPDATE
+UPDATE destinations SET average_cost = 5500000.00 WHERE destination_id = @destination_id;
+
+-- DELETE
+DELETE FROM destinations WHERE destination_id = @destination_id;
+
+-- ACCOMMODATIONS
+-- CREATE
+INSERT INTO accommodations
+(destination_id, name, type, price_per_night, rating, provider, external_id)
+VALUES (@destination_id, 'Hotel Santai', 'Hotel', 750000.00, 4.5, 'Local', 'HOTEL-123');
+SET @accommodation_id := LAST_INSERT_ID();
+
+-- READ
+SELECT a.accommodation_id, a.name, a.type, a.price_per_night, a.rating,
+       d.name AS destination_name
+FROM accommodations a
+LEFT JOIN destinations d ON d.destination_id = a.destination_id
+WHERE a.accommodation_id = @accommodation_id;
+
+-- UPDATE
+UPDATE accommodations SET price_per_night = 800000.00 WHERE accommodation_id = @accommodation_id;
+
+-- DELETE
+DELETE FROM accommodations WHERE accommodation_id = @accommodation_id;
+
+-- BOOKINGS
+-- CREATE
+INSERT INTO bookings
+(user_id, holiday_id, destination_id, accommodation_id, status, currency, total_amount, payment_status)
+VALUES (@user_id, @holiday_id, @destination_id, @accommodation_id, 'pending', 'Rupiah', 4500000.00, 'unpaid');
+SET @booking_id := LAST_INSERT_ID();
+
+-- READ
+SELECT b.booking_id, b.status, b.currency, b.total_amount, b.payment_status, b.booking_date,
+       u.name AS user_name, d.name AS destination_name, a.name AS accommodation_name
+FROM bookings b
+JOIN users u ON u.id = b.user_id
+LEFT JOIN destinations d ON d.destination_id = b.destination_id
+LEFT JOIN accommodations a ON a.accommodation_id = b.accommodation_id
+WHERE b.booking_id = @booking_id;
+
+-- UPDATE
+UPDATE bookings
+SET status = 'confirmed', total_amount = 4700000.00, payment_status = 'paid'
+WHERE booking_id = @booking_id;
+
+-- DELETE
+DELETE FROM bookings WHERE booking_id = @booking_id;
+
+-- PAYMENTS
+-- CREATE
+INSERT INTO payments
+(booking_id, amount, method, provider, status, transaction_id, paid_at)
+VALUES (@booking_id, 4700000.00, 'virtual_account', 'Bank XYZ', 'pending', 'TX-001', NULL);
+SET @payment_id := LAST_INSERT_ID();
+
+-- READ
+SELECT p.payment_id, p.amount, p.method, p.provider, p.status, p.transaction_id, p.paid_at,
+       b.status AS booking_status
+FROM payments p
+JOIN bookings b ON b.booking_id = p.booking_id
+WHERE p.payment_id = @payment_id;
+
+-- UPDATE
+UPDATE payments
+SET status = 'paid', paid_at = NOW(), transaction_id = 'TX-001-SETTLED'
+WHERE payment_id = @payment_id;
+
+-- DELETE
+DELETE FROM payments WHERE payment_id = @payment_id;
+
+-- AI_RECOMMENDATIONS
+-- CREATE
+INSERT INTO ai_recommendations (user_id, holiday_id, source, payload, response_json)
+VALUES (
+  @user_id,
+  @holiday_id,
+  'local',
+  JSON_OBJECT('preferences', JSON_OBJECT('destination_hint','Bali','duration_days',7,'budget_max',9000000)),
+  NULL
+);
+SET @rec_id := LAST_INSERT_ID();
+
+-- READ
+SELECT recommendation_id,
+       JSON_EXTRACT(payload, '$.preferences.destination_hint') AS dest_hint,
+       JSON_EXTRACT(payload, '$.preferences.duration_days') AS duration,
+       response_json
+FROM ai_recommendations
+WHERE recommendation_id = @rec_id;
+
+-- UPDATE
+UPDATE ai_recommendations
+SET response_json = JSON_OBJECT('suggestions', JSON_ARRAY('Kuta','Ubud'), 'score', 0.92)
+WHERE recommendation_id = @rec_id;
+
+-- DELETE
+DELETE FROM ai_recommendations WHERE recommendation_id = @rec_id;
