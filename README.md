@@ -3,8 +3,10 @@
 - Navigate to the project directory: `cd Travel_App`
 - Install dependencies: `composer install`
 - Set up environment variables: `cp .env.example .env` and configure the `.env` file
+- Set `GOOGLE_AI_API_KEY=`
 - Generate application key: `php artisan key:generate`
 - Run database migrations: `php artisan migrate --seed`
+- (Optional) If you want to reset and re-seed the database, run: `php artisan migrate:fresh --seed`
 - Start the development server: `php artisan serve`
 
 
