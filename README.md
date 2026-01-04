@@ -1,3 +1,13 @@
+# Step-By-Step Application Running Guide
+- Clone the repository: `git clone https://github.com/Neilsya29RPL/Travel_App.git --branch updated-v1`
+- Navigate to the project directory: `cd Travel_App`
+- Install dependencies: `composer install`
+- Set up environment variables: `cp .env.example .env` and configure the `.env` file
+- Generate application key: `php artisan key:generate`
+- Run database migrations: `php artisan migrate --seed`
+- Start the development server: `php artisan serve`
+
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
