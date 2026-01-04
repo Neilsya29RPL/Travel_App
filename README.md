@@ -8,6 +8,7 @@
 - Run database migrations: `php artisan migrate --seed`
 - (Optional) If you want to reset and re-seed the database, run: `php artisan migrate:fresh --seed`
 - Start the development server: `php artisan serve`
+- Open your web browser and navigate to `http://localhost:8000` to view the application.
 
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
